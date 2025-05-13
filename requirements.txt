@@ -1,0 +1,6 @@
+mcp[cli]>=0.1.0
+praw>=7.7.1
+textblob>=0.17.1
+nltk>=3.8.1
+python-dotenv>=1.0.0
+requests>=2.31.0 
