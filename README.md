@@ -23,6 +23,12 @@
    - 서브레딧 활성도 평가
    - 감정 분석
 
+4. **웹 페이지 내용 가져오기 (fetch_webpage)**
+   - Reddit 페이지를 포함한 웹 페이지 콘텐츠를 직접 가져오기
+   - HTML 원본 또는 정제된 텍스트 형식으로 콘텐츠 추출
+   - Reddit 페이지에 최적화된 콘텐츠 구문 분석
+   - 제목, 포스트 내용 등 주요 정보 추출
+
 ## 설치 및 설정
 
 ### 요구 사항
@@ -103,6 +109,8 @@ Claude Desktop에서 다음과 같은 요청을 할 수 있습니다:
 - "레딧에서 'artificial intelligence' 키워드로 검색해줘"
 - "https://www.reddit.com/r/MachineLearning/comments/example URL의 포스트를 분석해줘"
 - "r/technology와 r/science 서브레딧의 주간 트렌드를 분석해줘"
+- "https://www.reddit.com/r/Python URL의 웹 페이지 내용을 직접 가져와줘"
+- "레딧의 프로그래밍 관련 페이지 내용을 텍스트만 추출해서 보여줘"
 
 ## 프로젝트 구조
 
@@ -130,4 +138,4 @@ MIT License
 
 ## 기여
 
-버그 리포트, 기능 요청, Pull Request 등 모든 기여를 환영합니다. 
+버그 리포트, 기능 요청, Pull Request 등 모든 기여를 환영합니다.

@@ -17,6 +17,8 @@ from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
 import string
+import requests
+from bs4 import BeautifulSoup
 
 from .config import REDDIT_CLIENT_ID, REDDIT_CLIENT_SECRET, REDDIT_USER_AGENT
 
@@ -45,6 +47,90 @@ lemmatizer = WordNetLemmatizer()
 def register_tools(mcp):
     """MCP 서버에 Reddit 분석 도구를 등록합니다."""
     
+    @mcp.tool()
+    def fetch_webpage(url: str, extract_text: bool = True, user_agent: str = None) -> dict:
+        """웹 페이지 내용을 직접 가져옵니다
+        
+        Args:
+            url: 가져올 웹 페이지의 URL (예: https://www.reddit.com/r/python)
+            extract_text: HTML에서 텍스트만 추출할지 여부 (기본값: True)
+            user_agent: 요청에 사용할 User-Agent 문자열 (기본값: Reddit API user agent)
+        
+        Returns:
+            웹 페이지의 내용 또는, 실패한 경우 오류 정보를 반환합니다
+        """
+        try:
+            # User-Agent 설정
+            headers = {
+                'User-Agent': user_agent or REDDIT_USER_AGENT
+            }
+            
+            # 웹 페이지 가져오기
+            response = requests.get(url, headers=headers, timeout=10)
+            response.raise_for_status()  # HTTP 오류 체크
+            
+            # 응답 콘텐츠 처리
+            if extract_text:
+                soup = BeautifulSoup(response.text, 'html.parser')
+                
+                # 스크립트와 스타일 요소 제거
+                for script in soup(["script", "style"]):
+                    script.extract()
+                
+                # 텍스트 추출
+                text = soup.get_text(separator='\n')
+                
+                # 공백 정리
+                lines = (line.strip() for line in text.splitlines())
+                chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
+                text = '\n'.join(chunk for chunk in chunks if chunk)
+                
+                # Reddit 특화 정보 추출 (제목, 포스트 내용, 댓글 등)
+                title = soup.find('title')
+                title_text = title.get_text() if title else "제목을 찾을 수 없습니다"
+                
+                # 포스트 내용 추출 시도 (Reddit의 구조에 따라 선택자가 변경될 수 있음)
+                post_content = None
+                post_div = soup.select_one('div[data-test-id="post-content"]')
+                if post_div:
+                    post_content = post_div.get_text(strip=True)
+                
+                return {
+                    "status": "success",
+                    "url": url,
+                    "title": title_text,
+                    "post_content": post_content,
+                    "full_text": text[:5000] + ("..." if len(text) > 5000 else ""),  # 텍스트가 너무 길면 자름
+                    "content_length": len(text),
+                    "content_type": response.headers.get('Content-Type', ''),
+                    "is_reddit_page": "reddit.com" in url
+                }
+            else:
+                # HTML 원본 반환
+                return {
+                    "status": "success",
+                    "url": url,
+                    "html": response.text[:5000] + ("..." if len(response.text) > 5000 else ""),  # HTML이 너무 길면 자름
+                    "content_length": len(response.text),
+                    "content_type": response.headers.get('Content-Type', ''),
+                    "is_reddit_page": "reddit.com" in url
+                }
+        
+        except requests.exceptions.RequestException as e:
+            logger.error(f"웹 페이지 가져오기 오류: {str(e)}", exc_info=True)
+            return {
+                "status": "error",
+                "url": url,
+                "message": f"웹 페이지 가져오기 중 오류 발생: {str(e)}"
+            }
+        except Exception as e:
+            logger.error(f"웹 페이지 처리 중 오류: {str(e)}", exc_info=True)
+            return {
+                "status": "error",
+                "url": url,
+                "message": f"웹 페이지 처리 중 오류 발생: {str(e)}"
+            }
+
     @mcp.tool()
     def search_reddit(query: str, search_type: str = "post", subreddit: str = None, time_filter: str = "month", limit: int = 20) -> dict:
         """레딧에서 키워드로 서브레딧 또는 포스트를 검색합니다
